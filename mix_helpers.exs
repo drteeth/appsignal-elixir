@@ -101,7 +101,7 @@ defmodule Mix.Appsignal.Helper do
     cond do
       has_local_release_files?() ->
         Mix.shell().info("AppSignal: Using local agent release.")
-        File.mkdir_p!(priv_dir())
+        priv_dir() |> File.mkdir_p!() |> dbg()
         clean_up_extension_files()
 
         Enum.each(
@@ -122,6 +122,7 @@ defmodule Mix.Appsignal.Helper do
           merge_report(report, %{build: %{source: "remote"}})}}
 
       true ->
+        dbg("build from remote?")
         {:ok, {arch_config, merge_report(report, %{build: %{source: "remote"}})}}
     end
   end
@@ -159,13 +160,13 @@ defmodule Mix.Appsignal.Helper do
 
     local_filename = Path.join(tmp_dir(), "appsignal-agent-#{version}.tar.gz")
 
-    case File.exists?(local_filename) do
+    case local_filename |> File.exists?() |> dbg do
       true ->
         {:ok, {local_filename, merge_report(report, %{build: %{source: "cached_in_tmp_dir"}})}}
 
       false ->
         Mix.shell().info("Downloading agent release")
-        :application.ensure_all_started(:hackney)
+        :application.ensure_all_started(:hackney) |> dbg()
 
         case do_download_file!(filename, local_filename, Appsignal.Agent.mirrors()) do
           {:ok, url} ->
@@ -197,6 +198,8 @@ defmodule Mix.Appsignal.Helper do
   end
 
   defp do_download_file!(filename, local_filename, mirrors) do
+    dbg({"do_download_file", filename})
+
     Enum.reduce_while(mirrors, {1, []}, fn mirror, {acc, errors} ->
       version = Appsignal.Agent.version()
       url = build_download_url(mirror, version, filename)
@@ -425,7 +428,7 @@ defmodule Mix.Appsignal.Helper do
   end
 
   defp has_file(filename) do
-    filename |> priv_path |> File.exists?()
+    filename |> priv_path |> File.exists?() |> dbg()
   end
 
   defp has_local_ext_file(filename) do
